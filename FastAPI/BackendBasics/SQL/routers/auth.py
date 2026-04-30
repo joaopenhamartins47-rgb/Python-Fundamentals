@@ -29,11 +29,11 @@ class CreateUserRequest(BaseModel): #Create to validate the inputs in post metho
     first_name: str
     last_name: str
     password: str
-    roll: str
+    role: str
 
 class Token(BaseModel):
-    acess_token: str
-    token_type = str
+    access_token: str
+    token_type: str
 
 def get_db():
     db = Sessionlocal()
@@ -59,7 +59,7 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     encode.update({'exp': expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]): #recebe token, decodifica, pega username e id, se inválido → erro 401, se válido → retorna usuário
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str=payload.get('sub')
@@ -81,7 +81,7 @@ async def create_user(db: db_dependency,
         username=create_user.username,
         first_name = create_user.first_name,
         last_name = create_user.last_name,
-        role = create_user.roll,
+        role = create_user.role,
         hashed_password = bcrypt_context.hash(create_user.password),
         is_active=True
     )
