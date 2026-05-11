@@ -1,169 +1,85 @@
-# Todo API
+# TodoApp — FastAPI
 
-A simple and clean REST API for managing your todos, built with FastAPI and SQLite. This was built as part of a learning project to understand how FastAPI handles database connections, dependency injection, and request validation.
+This is a todo application I built while studying FastAPI. The goal was never to make something pretty — the focus is entirely on the backend: how the API is structured, how authentication works, how the database is managed, and how everything is tested.
 
-## What it does
+The frontend exists just to make the app usable. It's server-side rendered with Jinja2 templates and Bootstrap via CDN. Don't judge the HTML.
 
-You can create, read, and update todos. Each todo has a title, a description, a priority level, and a completion status. The API validates everything before touching the database, so you won't end up with garbage data.
+---
 
-## Tech stack
+## What the app does
 
-- **FastAPI** — the web framework
-- **SQLAlchemy** — ORM for database interaction
-- **SQLite** — lightweight local database (stored as `todos.db`)
-- **Pydantic** — request body validation
+Users can create an account, log in, and manage their own list of todos. Each todo has a title, description, priority from 1 to 5, and a completion status. There's also an admin role that can view and delete anyone's todos. Authentication is handled with JWT tokens stored in cookies, and the token expires after 20 minutes.
 
-## Getting started
+---
 
-### Requirements
+## Tech used
 
-- Python 3.10+
-- pip
+FastAPI, PostgreSQL, SQLAlchemy, Alembic for migrations, python-jose for JWT, passlib with bcrypt for passwords, Jinja2 for templates, and Pytest with SQLite in-memory for testing.
 
-### Installation
+---
 
-```bash
-git clone https://github.com/your-username/todo-api.git
-cd todo-api
-pip install fastapi sqlalchemy uvicorn
-```
+## How to run locally
 
-### Running the server
+Clone the repo, create a virtual environment and install the dependencies:
 
 ```bash
-uvicorn main:app --reload
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
 ```
 
-The API will be live at `http://127.0.0.1:8000`. The database file `todos.db` is created automatically on first run — no setup needed.
+Copy the `.env.example` file to `.env` and fill in your database credentials and secret key:
 
-Once the server is running, you can explore the interactive docs at `http://127.0.0.1:8000/docs`.
+```env
+DATABASE_URL=postgresql://your_user:your_password@localhost/your_db
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
+```
+
+Run the migrations and start the server:
+
+```bash
+alembic upgrade head
+uvicorn Todoapp.main:app --reload
+```
+
+The app will be at `http://localhost:8000`.
+
+---
+
+## Running tests
+
+The tests use SQLite in-memory so you don't need PostgreSQL running. Just run:
+
+```bash
+pytest
+```
+
+---
 
 ## Project structure
 
 ```
-__init__.py
-main.py        # Routes and app entry point
-models.py      # SQLAlchemy table definition
-database.py    # Database engine and session setup
-todos.db       # SQLite database (auto-generated)
-```
-
-## API reference
-
-### Get all todos
-
-```
-GET /
-```
-
-Returns a list of all todos in the database.
-
-**Response `200 OK`**
-```json
-[
-  {
-    "id": 1,
-    "title": "Study FastAPI",
-    "description": "Finish section 8 of the course",
-    "priority": 3,
-    "complete": false
-  }
-]
+Todoapp/
+├── alembic/            # migrations
+├── routers/            # auth, todos, admin, users
+├── test/               # all tests and fixtures
+├── static/             # base.css and base.js (custom only)
+├── templates/          # Jinja2 HTML templates
+├── database.py
+├── models.py
+├── main.py
+├── requirements.txt
+└── .env.example
 ```
 
 ---
 
-### Get a single todo
+## What I learned
 
-```
-GET /todo/{todo_id}
-```
+This project was where a lot of things clicked for me. I got comfortable with SQLAlchemy sessions, how dependency injection works in FastAPI with `Depends()`, how to structure routers, and how to test an API properly by overriding dependencies and using fixtures. Alembic was new to me and took a bit to understand, but it makes a lot of sense once you see it in action.
 
-Returns a single todo by its ID.
+The authentication part was the most interesting — signing and decoding JWT tokens manually, handling expiration, and tying it all together with OAuth2PasswordBearer and cookies.
 
-| Parameter | Type | Rules |
-|-----------|------|-------|
-| `todo_id` | int | must be greater than 0 |
-
-**Response `200 OK`** — returns the todo object
-
-**Response `404 Not Found`**
-```json
-{ "detail": "Todo not found." }
-```
-
----
-
-### Create a todo
-
-```
-POST /todo
-```
-
-Creates a new todo. The request body is validated before anything hits the database.
-
-**Request body**
-```json
-{
-  "title": "Study FastAPI",
-  "description": "Finish section 8 of the course",
-  "priority": 3,
-  "complete": false
-}
-```
-
-| Field | Type | Rules |
-|-------|------|-------|
-| `title` | string | min 3 characters |
-| `description` | string | min 3, max 100 characters |
-| `priority` | int | between 1 and 5 (inclusive) |
-| `complete` | bool | true or false |
-
-**Response `201 Created`** — no body returned
-
-**Response `422 Unprocessable Entity`** — if any field fails validation
-
----
-
-### Update a todo
-
-```
-PUT /todo/{todo_id}
-```
-
-Updates an existing todo. Requires the full object in the request body — all fields are replaced.
-
-| Parameter | Type | Rules |
-|-----------|------|-------|
-| `todo_id` | int | must be greater than 0 |
-
-**Request body** — same structure as POST
-
-**Response `204 No Content`** — no body returned
-
-**Response `404 Not Found`**
-```json
-{ "detail": "Todo not found" }
-```
-
----
-
-## How database sessions work
-
-Each request gets its own database session, which is automatically closed when the request finishes — even if something goes wrong. This is handled by the `get_db` dependency:
-
-```python
-def get_db():
-    db = Sessionlocal()
-    try:
-        yield db
-    finally:
-        db.close()
-```
-
-FastAPI injects this session into every route that needs it via `Depends(get_db)`, so you never have to manage connections manually.
-
-## Notes
-
-- This project uses SQLite, which is great for local development and learning. For production, you'd swap the database URL in `database.py` for PostgreSQL or MySQL — everything else stays the same.
+This is part of a larger learning path toward backend AI engineering. Next projects will go further into deployment, async patterns, and eventually ML serving.
 
